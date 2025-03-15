@@ -1,4 +1,5 @@
 import uvicorn
+from fastapi import FastAPI
 app = FastAPI()
 def sum_two_args(x,y):
  return x+y
