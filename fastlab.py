@@ -5,6 +5,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 import fastapi.responses
 import numpy
+from pydantic import BaseModel
 import io
 from PIL import Image
 from fastapi import FastAPI, Request
@@ -101,5 +102,18 @@ async def make_image(request: Request,
         # извлечены браузером запросами get по указанным ссылкам в img src
     return templates.TemplateResponse("forms.html", {"request": request,
                                                      "ready": ready, "images": images})
+
+ class User(BaseModel):
+     name: str
+     age: int
+
+ @app.get('/users/{user_id}')
+ def get_user(user_id):
+     return User(name="John Doe", age=20)
+
+ @app.put('/users/{user_id}')
+ def update_user(user_id, user: User):
+     # поместите сюда код для обновления данных
+     return user
 
 
