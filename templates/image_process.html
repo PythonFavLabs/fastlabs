@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Image Processing</title>
+</head>
+<body>
+    <h2>Upload Image for Processing</h2>
+    <form action="/image_process" enctype="multipart/form-data" method="post">
+        <p>
+            Choose Image: <input name="file" type="file" required>
+        </p>
+        <p>
+            Period: <input name="period" type="number" step="0.1" value="1.0" required>
+        </p>
+        <p>
+            Mode:
+            <select name="mode">
+                <option value="sin">Sin</option>
+                <option value="cos">Cos</option>
+            </select>
+        </p>
+        <p>
+            Direction:
+            <select name="direction">
+                <option value="horizontal">Horizontal</option>
+                <option value="vertical">Vertical</option>
+            </select>
+        </p>
+        <p>
+            <input type="submit" value="Process Image">
+        </p>
+    </form>
+
+    {% if original and modified %}
+    <h2>Results</h2>
+    <table>
+        <tr>
+            <th>Original Image</th>
+            <th>Processed Image</th>
+        </tr>
+        <tr>
+            <td><img src="/{{ original }}" width="300"></td>
+            <td><img src="/{{ modified }}" width="300"></td>
+        </tr>
+        <tr>
+            <th>Original Histogram</th>
+            <th>Processed Histogram</th>
+        </tr>
+        <tr>
+            <td><img src="/{{ plot_original }}" width="300"></td>
+            <td><img src="/{{ plot_modified }}" width="300"></td>
+        </tr>
+    </table>
+    {% endif %}
+</body>
+</html>

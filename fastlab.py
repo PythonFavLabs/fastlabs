@@ -6,6 +6,7 @@ from fastapi.templating import Jinja2Templates
 import fastapi.responses
 import numpy
 from pydantic import BaseModel
+import os
 import io
 from PIL import Image
 from fastapi import FastAPI, Request
@@ -14,6 +15,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi import Form, File, UploadFile
 from typing import List
+import matplotlib.pyplot as plt
 import hashlib
 from PIL import ImageDraw
 
@@ -26,6 +28,7 @@ def read_root():
  return {"Hello": "World"}
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
+os.makedirs("static/images", exist_ok=True)
 @app.get("/some_url/{something}", response_class=HTMLResponse)
 async def read_something(request: Request, something: str):
  return templates.TemplateResponse("some.html", {"request": request,
@@ -103,16 +106,78 @@ async def make_image(request: Request,
     return templates.TemplateResponse("forms.html", {"request": request,
                                                      "ready": ready, "images": images})
 
- class User(BaseModel):
-     name: str
-     age: int
+class User(BaseModel):
+    name: str
+    age: int
 
- @app.get('/users/{user_id}')
- def get_user(user_id):
-     return User(name="John Doe", age=20)
+@app.get('/users/{user_id}')
+def get_user(user_id):
+    return User(name="John Doe", age=20)
 
- @app.put('/users/{user_id}')
- def update_user(user_id, user: User):
+def apply_function(img_array, period, mode, direction):
+    h, w, c = img_array.shape
+    img_array = img_array.astype(numpy.float32) / 255.
+    if direction == "horizontal":
+        x = numpy.linspace(0, 2 * numpy.pi, w)
+        factor = numpy.sin(x * period) if mode == "sin" else numpy.cos(x * period)
+        factor = factor.reshape(1, w, 1)
+    else:
+        y = numpy.linspace(0, 2 * numpy.pi, h)
+        factor = numpy.sin(y * period) if mode == "sin" else numpy.cos(y * period)
+        factor = factor.reshape(h, 1, 1 )
+    new_img = numpy.clip(img_array * factor, 0, 1)
+    return (new_img * 255).astype(numpy.uint8)
+
+def save_plot(image_array, filename):
+    plt.figure(figsize=(6, 3))
+    plt.hist(image_array.ravel(), bins=256, color='gray', alpha=0.7)
+    plt.xlabel("Pixel value")
+    plt.ylabel("Frequency")
+    plt.title("Color Distribution")
+    plt.savefig(filename)
+    plt.close()
+
+@app.get("/image_process", response_class=HTMLResponse)
+async def image_process_form(request: Request):
+    return templates.TemplateResponse("image_process.html",
+                                       {"request": request, "original": None, "modified": None, "plot_original": None,
+                                        "plot_modified": None})
+
+#Задание для 18 варианта 1 Л.Р.
+@app.post("/image_process_task")
+async def process_image(
+         request: Request,
+         file: UploadFile = File(...),
+         period: float = Form(...),
+         mode: str = Form(...),
+         direction: str = Form(...)
+ ):
+    image = Image.open(io.BytesIO(file.file.read())).convert("RGB")
+    img_array = numpy.array(image)
+    modified_img_array = apply_function(img_array, period, mode, direction)
+    modified_image = Image.fromarray(modified_img_array)
+    original_path = f"static/images/original_{file.filename}"
+    modified_path = f"static/images/modified_{file.filename}"
+    plot_original = f"static/images/original_plot_{file.filename}.png"
+    plot_modified = f"static/images/modified_plot_{file.filename}.png"
+
+    image.save(original_path)
+    modified_image.save(modified_path)
+    save_plot(img_array, plot_original)
+    save_plot(modified_img_array, plot_modified)
+    return templates.TemplateResponse(
+         "image_process.html",
+         {
+             "request": request,
+             "original": original_path,
+             "modified": modified_path,
+             "plot_original": plot_original,
+             "plot_modified": plot_modified,
+         }
+     )
+
+@app.put('/users/{user_id}')
+async def update_user(user_id, user: User):
      # поместите сюда код для обновления данных
      return user
 
